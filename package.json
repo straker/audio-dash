@@ -1,0 +1,26 @@
+{
+  "name": "audio-dash",
+  "version": "1.0.0",
+  "main": "index.html",
+  "author": "Steven Lambert",
+  "license": "MIT",
+  "scripts": {
+    "start": "http-server"
+  },
+  "dependencies": {
+    "gulp": "^3.9.1",
+    "gulp-add-src": "^1.0.0",
+    "gulp-concat-util": "^0.5.5",
+    "gulp-htmlmin": "^5.0.1",
+    "gulp-plumber": "^1.2.0",
+    "gulp-rename": "^1.4.0",
+    "gulp-size": "^3.0.0",
+    "gulp-terser": "^1.0.1",
+    "http-server": "^0.11.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.0.1",
+    "@babel/preset-env": "^7.0.0",
+    "gulp-babel": "^8.0.0"
+  }
+}
