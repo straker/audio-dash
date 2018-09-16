@@ -172,20 +172,26 @@ menuScene.add(startBtn, uploadBtn, optionsBtn);
 //------------------------------------------------------------
 let loadingScene = Scene('upload');
 let loadingTimer = 0;
+
+loadingScene.onShow = () => {
+  loadingTimer = 0;
+}
+
 let loadingText = Text({
-  x: 245,
+  x: kontra.canvas.width / 2,
   y: kontra.canvas.height / 2,
+  center: true,
   text() {
     ++loadingTimer;
-    let text = 'LOADING';
+    let text = translation.loading + '   ';
     if (loadingTimer >= 60) {
-      text += '.'
+      text = setCharAt(text, text.length - 3, '.');
     }
     if (loadingTimer >= 120) {
-      text += '.'
+      text = setCharAt(text, text.length - 2, '.');
     }
     if (loadingTimer >= 180) {
-      text += '.'
+      text = setCharAt(text, text.length - 1, '.');
     }
     if (loadingTimer >= 240) {
       loadingTimer = 0;
@@ -203,6 +209,9 @@ loadingScene.add(loadingText);
 //------------------------------------------------------------
 // Options Scene
 //------------------------------------------------------------
+let optionsScene = Scene('options');
+
+let lastOptionBtn;
 let opts = [{
   name: 'volume',
   minValue: 0,
@@ -222,89 +231,180 @@ let opts = [{
   inc: 0.05
 },
 {
-  name: 'language',
-  values: Object.keys(translations),
-  index: translations.getIndex(translation)
+  name: 'peaks',
+  minValue: 0,
+  maxValue: 1,
+  inc: 0.1
+},
+{
+  name: 'casual',
+  type: 'toggle',
+  minValue: 0,
+  maxValue: 1,
+  inc: 1
+}];
+if (Object.keys(translations).length > 1) {
+  opts.push({
+    name: 'language',
+    button: {
+      text() {
+        return translations[options.language]._name_;
+      },
+      onDown() {
+        lastOptionBtn = this;
+        optionsScene.hide(() => {
+          languageScene.show();
+        });
+      }
+    }
+  });
 }
-];
+
 let beforeOptions;
-let optionsScene = Scene('options');
 let focusEl;
+
 optionsScene.onShow = () => {
-  beforeOptions = Object.assign({}, options);
-  focusEl.domEl.focus();
+  if (!lastOptionBtn) {
+    beforeOptions = Object.assign({}, options);
+    focusEl.domEl.focus();
+  }
 };
 
-let startY = 200;
+let startY = 170;
 let optionTexts = [];
+
+optionsScene.add(Text({
+  x: kontra.canvas.width / 2,
+  y: 90,
+  size: 50,
+  center: true,
+  maxWidth: kontra.canvas.width - 100,
+  text() {
+    return translation.options;
+  }
+}));
 
 opts.forEach((opt, index) => {
   let optionText = Text({
-    x: 50,
+    x: 15,
     y: index === 0 ? startY : null,
-    prev: index > 0 ? optionTexts[index-1] : null,
-    text: translation[opt.name],
-    maxWidth: 275
-  });
-  let optionValue = Text({
-    x: 475,
-    y: index === 0 ? startY : null,
-    center: true,
     prev: index > 0 ? optionTexts[index-1] : null,
     text() {
-      return (''+Math.round(options[opt.name] * 100)).padStart(3, ' ') + '%';
-    }
+      return translation[opt.name];
+    },
+    maxWidth: 310
   });
 
-  let decBtn = Button({
-    x: 375,
-    y: index === 0 ? startY : null,
-    prev: index > 0 ? optionTexts[index-1] : null,
-    text: '-',
-    label: translation['decrease_'+opt.name],
-    update() {
-      this.disabled = options[opt.name] === opt.minValue;
-    },
-    onDown() {
-      changeValue(-opt.inc);
+  if (opt.button) {
+    let optionBtn = Button({
+      x: 475,
+      y: index === 0 ? startY : null,
+      prev: index > 0 ? optionTexts[index-1] : null,
+      text: opt.button.text,
+      onDown: opt.button.onDown
+    });
+
+    optionsScene.add(optionText, optionBtn);
+  }
+  else {
+    let optionValue = Text({
+      x: 475,
+      y: index === 0 ? startY : null,
+      center: true,
+      prev: index > 0 ? optionTexts[index-1] : null,
+      live: true,
+      text() {
+        if (opt.type === 'toggle') {
+          return options[opt.name] === 1 ? 'On' : 'Off';
+        }
+        else {
+          return (''+Math.round(options[opt.name] * 100)) + '%';
+        }
+      }
+    });
+
+    let decBtn = Button({
+      x: 375,
+      y: index === 0 ? startY : null,
+      prev: index > 0 ? optionTexts[index-1] : null,
+      text: '-',
+      label() {
+        return translation[(opt.type === 'toggle' ? 'off_' : 'decrease_')+opt.name]
+      },
+      update() {
+        this.disabled = options[opt.name] === opt.minValue;
+      },
+      onDown() {
+        changeValue(-opt.inc);
+      }
+    });
+    if (index === 0) {
+      focusEl = decBtn;
     }
-  });
-  if (index === 0) {
-    focusEl = decBtn;
+
+    let incBtn = Button({
+      x: 575,
+      y: index === 0 ? startY : null,
+      prev: index > 0 ? optionTexts[index-1] : null,
+      text: '+',
+      label() {
+        return translation[(opt.type === 'toggle' ? 'on_' : 'increase_')+opt.name]
+      },
+      update() {
+        this.disabled = options[opt.name] === opt.maxValue;
+      },
+      onDown() {
+        changeValue(opt.inc);
+      }
+    });
+
+    function changeValue(inc) {
+      let value = clamp(options[opt.name] + inc, opt.minValue, opt.maxValue);
+
+      // remove floating point errors (0.7+0.1)
+      // @see http://blog.blakesimpson.co.uk/read/61-fix-0-1-0-2-0-300000004-in-javascript
+      value = +value.toFixed(2);
+      options[opt.name] = value;
+      setFontMeasurement();
+    }
+
+    optionsScene.add(optionText, optionValue, decBtn, incBtn);
   }
 
-  let incBtn = Button({
-    x: 575,
-    y: index === 0 ? startY : null,
-    prev: index > 0 ? optionTexts[index-1] : null,
-    text: '+',
-    label: translation['increase_'+opt.name],
-    update() {
-      this.disabled = options[opt.name] === opt.maxValue;
-    },
-    onDown() {
-      changeValue(opt.inc);
-    }
-  });
-
-  function changeValue(inc) {
-    let value = clamp(options[opt.name] + inc, opt.minValue, opt.maxValue);
-    options[opt.name] = value;
-    setFontMeasurement();
-  }
-
-  optionsScene.add(optionText, optionValue, decBtn, incBtn);
   optionTexts.push(optionText);
 });
 
+
+let cancelBtn = Button({
+  x: 69,
+  prev: optionTexts[optionTexts.length-1],
+  margin: 45,
+  center: false,
+  text() {
+    return translation.cancel;
+  },
+  onDown() {
+    optionsScene.hide(() => {
+      lastOptionBtn = null;
+      options = beforeOptions;
+      setFontMeasurement();
+      menuScene.show(() => startBtn.domEl.focus());
+    });
+  }
+});
 let saveBtn = Button({
-  x: kontra.canvas.width / 2,
+  x: 475,
   prev: optionTexts[optionTexts.length-1],
   margin: 45,
   text() {
     return translation.save;
   },
   onDown() {
+    lastOptionBtn = null;
+    if (beforeOptions.peaks !== options.peaks) {
+      generateWaveData();
+    }
+
     kontra.store.set('audio-dash:options', options);
 
     optionsScene.hide(() => {
@@ -312,21 +412,76 @@ let saveBtn = Button({
     });
   }
 });
-let cancelBtn = Button({
+optionsScene.add(cancelBtn, saveBtn);
+
+
+
+
+
+//------------------------------------------------------------
+// Language Scene
+//------------------------------------------------------------
+let languageScene = Scene('language');
+let firstBtn;
+languageScene.onShow = () => {
+  for (let i = 0, child; child = languageScene.children[i]; i++) {
+    if (child.name === options.language) {
+      child.domEl.focus();
+      break;
+    }
+  }
+};
+
+languageScene.add(Text({
   x: kontra.canvas.width / 2,
-  prev: saveBtn,
+  y: 90,
+  size: 50,
+  center: true,
+  maxWidth: kontra.canvas.width - 100,
+  text() {
+    return translation.language;
+  }
+}));
+
+Object.keys(translations).forEach((language, index) => {
+  let btn = Button({
+    x: kontra.canvas.width / 2,
+    y: firstBtn ? null : startY,
+    prev: firstBtn,
+    center: true,
+    name: language,
+    text() {
+      return translations[language]._name_;
+    },
+    onDown() {
+      languageScene.hide(() => {
+        options.language = language;
+        setTranslation(language);
+        optionsScene.show(() => lastOptionBtn.domEl.focus());
+      });
+    }
+  });
+
+  if (index === 0) {
+    firstBtn = btn;
+  }
+
+  languageScene.add(btn);
+});
+let languageCancelBtn = Button({
+  x: kontra.canvas.width / 2,
+  prev: languageScene.children[languageScene.children.length-1],
+  margin: 45,
   text() {
     return translation.cancel;
   },
   onDown() {
-    optionsScene.hide(() => {
-      options = beforeOptions;
-      setFontMeasurement();
-      menuScene.show(() => startBtn.domEl.focus());
+    languageScene.hide(() => {
+      optionsScene.show(() => lastOptionBtn.domEl.focus());
     });
   }
 });
-optionsScene.add(saveBtn, cancelBtn);
+languageScene.add(languageCancelBtn);
 
 
 
@@ -415,7 +570,7 @@ gameScene.add({
         ampBar = wave;
 
         // collision detection
-        if (!gameOverScene.active) {
+        if (!gameOverScene.active && !options.casual) {
           if (collidesWithShip(topY, topHeight) ||
               collidesWithShip(botY, botHeight) ||
               ship.y < -50 ||
@@ -468,7 +623,7 @@ gameScene.add({
 let gameOverScene = Scene('gameOver');
 gameOverScene.add({
   render() {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
     ctx.fillRect(0, 0, kontra.canvas.width, kontra.canvas.height);
   }
 });
@@ -520,7 +675,7 @@ gameOverScene.add(gameOverText, restartBtn, menuBtn);
 let winScene = Scene('win');
 winScene.add({
   render() {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
     ctx.fillRect(0, 0, kontra.canvas.width, kontra.canvas.height);
   }
 });
@@ -545,5 +700,15 @@ let winMenuBtn = Button({
       menuScene.show(() => startBtn.domEl.focus());
     });
   }
-})
-winScene.add(winText, winMenuBtn);
+});
+let winUploadBtn = Button({
+  x: kontra.canvas.width / 2,
+  prev: winMenuBtn,
+  text() {
+    return translation.upload;
+  },
+  onDown() {
+    uploadFile.click();
+  }
+});
+winScene.add(winText, winMenuBtn, winUploadBtn);

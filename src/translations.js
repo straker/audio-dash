@@ -1,31 +1,40 @@
 let translations = {
   en: {
-    "start": "START",
-    "upload": "UPLOAD SONG",
-    "options": "OPTIONS",
+    "_name_": "English",
+    "start": "Start",
+    "upload": "Upload Song",
+    "options": "Options",
     "spacebar": "[Spacebar]",
     "select": "Select",
-    "decrease": "Decrease",
-    "volume": "VOLUME",
+    "volume": "Volume",
     "increase_volume": "Increase Volume",
     "decrease_volume": "Decrease Volume",
-    "uiScale": "UI SCALE",
+    "uiScale": "UI Scale",
     "increase_uiScale": "Increase UI Scale",
     "decrease_uiScale": "Decrease UI Scale",
-    "gameSpeed": "GAME SPEED",
+    "gameSpeed": "Game Speed",
     "increase_gameSpeed": "Increase Game Speed",
     "decrease_gameSpeed": "Decrease Game Speed",
-    "save": "SAVE",
-    "cancel": "CANCEL",
+    "peaks": "Peaks",
+    "increase_peaks": "Increase Peaks",
+    "decrease_peaks": "Decrease Peaks",
+    "casual": "Casual",
+    "on_casual": "Turn on Casual",
+    "off_casual": "Turn off Casual",
+    "language": "Language",
+    "save": "Save",
+    "cancel": "Cancel",
     "time": "TIME",
     "best": "BEST",
     "tapHold": "Tap or Hold",
-    "gameOver": "GAME OVER",
-    "restart": "RESTART",
-    "mainMenu": "MAIN MENU",
-    "completed": "SONG COMPLETED!"
+    "gameOver": "Game Over",
+    "restart": "Restart",
+    "mainMenu": "Main Menu",
+    "completed": "Song Completed!",
+    "loading": "Loading"
   },
   es: {
+    "_name_": "Español",
     "start": "INICIO",
     "upload": "SUBIR CANCIÓN",
     "options": "OPCIONES",
@@ -40,6 +49,13 @@ let translations = {
     "gameSpeed": "VELOCIDAD DEL JUEGO",
     "increase_gameSpeed": "Aumentar la velocidad del juego",
     "decrease_gameSpeed": "Disminuir la velocidad del juego",
+    "peaks": "Peaks",
+    "increase_peaks": "Increase Peaks",
+    "decrease_peaks": "Decrease Peaks",
+    "casual": "Casual",
+    "on_casual": "Turn on Casual",
+    "off_casual": "Turn off Casual",
+    "language": "Idioma",
     "save": "GUARDAR",
     "cancel": "CANCELAR",
     "time": "TIEMPO",
@@ -48,7 +64,13 @@ let translations = {
     "gameOver": "JUEGO SE TERMINO",
     "restart": "REINICIAR",
     "mainMenu": "MENÚ PRINCIPAL",
-    "completed": "¡CANCIÓN COMPLETADA!"
+    "completed": "¡CANCIÓN COMPLETADA!",
+    "loading": "LoadingES"
   }
 };
-let translation = translations[options.language] || translations.en;
+
+function setTranslation(locale) {
+  translation = translations[locale] || translations.en;
+}
+
+setTranslation(options.language);

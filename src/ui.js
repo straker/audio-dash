@@ -9,10 +9,12 @@ let uiSpacer = 5;
  */
 function setDimensions(uiEl) {
   let text = typeof uiEl.text === 'function' ? uiEl.text() : uiEl.text;
-  uiEl.width = text.length * fontMeasurement + fontMeasurement * 2;
-  uiEl.height = fontMeasurement * 3;
+  let fontMeasure = (uiEl.size ? uiEl.size-5 : 25) / 25 * fontMeasurement;
 
-  if (uiEl.center || uiEl.type === 'button') {
+  uiEl.width = text.length * fontMeasure + fontMeasure * 2;
+  uiEl.height = fontMeasure * 3;
+
+  if (uiEl.center) {
     uiEl.x = uiEl.orgX - uiEl.width / 2;
   }
 
@@ -35,6 +37,10 @@ function Button(props) {
   props.orgX = props.x;
   props.orgY = props.y;
   props.type = 'button';
+
+  if (typeof props.center === 'undefined') {
+    props.center = true;
+  }
 
   setDimensions(props);
 
@@ -62,6 +68,18 @@ function Button(props) {
 
     ctx.fillStyle = this.disabled ? '#747474' : '#fff';
     let text = typeof this.text === 'function' ? this.text() : this.text;
+    let label = this.label ? this.label() : null
+
+    // update the HTML element with the new text
+    if (!label && this.lastText !== text) {
+      this.lastText = text;
+      this.domEl.textContent = text;
+    }
+    else if (label && this.lastLabel !== label) {
+      this.lastLabel = label;
+      this.domEl.textContent = label;
+    }
+
     ctx.fillText(text, this.x + fontMeasurement, this.y + fontMeasurement * 2);
     ctx.restore();
   };
@@ -81,7 +99,9 @@ function Button(props) {
 
   // create accessible html button for screen readers
   let el = document.createElement('button');
-  el.textContent = button.label || button.text;
+  el.textContent = button.label
+    ? button.label()
+    : typeof button.text === 'function' ? button.text() : button.text;
   el.addEventListener('focus', button.focus.bind(button));
   button.domEl = el;
 
@@ -110,6 +130,8 @@ function Text(props) {
     setDimensions(this);
 
     let text = typeof this.text === 'function' ? this.text() : this.text;
+
+    // update the HTML element with the new text
     if (this.lastText !== text) {
       this.lastText = text;
       this.domEl.textContent = text;
@@ -117,7 +139,7 @@ function Text(props) {
 
     ctx.save();
     ctx.fillStyle = '#fff';
-    let fontSize = 25;
+    let fontSize = this.size || 25;
     setFont(fontSize);
 
     if (this.maxWidth && this.width > this.maxWidth) {
@@ -156,7 +178,7 @@ function Text(props) {
   let el = document.createElement('div');
 
   // announce changes to screen reader
-  if (typeof props.text === 'function') {
+  if (props.live) {
     el.setAttribute('role', 'alert');
     el.setAttribute('aria-live', 'assertive');
     el.setAttribute('aria-atomic', true);

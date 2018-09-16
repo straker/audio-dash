@@ -40,7 +40,7 @@ loop = kontra.gameLoop({
 
     activeScenes.forEach(scene => scene.render())
 
-    if (menuScene.active || optionsScene.active) {
+    if (menuScene.active || optionsScene.active || languageScene.active) {
       showHelpText();
     }
 

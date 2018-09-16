@@ -189,13 +189,13 @@ function showHelpText() {
   if (lastUsedInput === 'keyboard') {
     setFont(18);
     ctx.fillStyle = 'white';
-    ctx.fillText(translation.spacebar + ' ' + translation.select, 50 - fontMeasurement, kontra.canvas.height - 50 + fontMeasurement / 2.5);
+    ctx.fillText(translation.spacebar + ' ' + translation.select, 28 - fontMeasurement, kontra.canvas.height - 25 + fontMeasurement / 2.5);
   }
   else if (lastUsedInput === 'gamepad') {
-    drawAButton(50, kontra.canvas.height - 50);
+    drawAButton(28, kontra.canvas.height - 25);
     setFont(18);
     ctx.fillStyle = 'white';
-    ctx.fillText(translation.select, 50 + fontMeasurement * 1.75, kontra.canvas.height - 50 + fontMeasurement / 2.5);
+    ctx.fillText(translation.select, 28 + fontMeasurement * 1.75, kontra.canvas.height - 25 + fontMeasurement / 2.5);
   }
 
   ctx.restore();

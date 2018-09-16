@@ -12,7 +12,9 @@ const defaultOptions = {
   volume: 1,
   uiScale: 1,
   gameSpeed: 1,
-  language: 'en'
+  language: 'en',
+  peaks: 1,
+  casual: 0,
 };
 
 let audio;  // audio file for playing/pausing
@@ -60,6 +62,12 @@ function getRandom(min, max) {
 
 function collidesWithShip(y, height) {
   return ship.y < y + height && ship.y + ship.height > y;
+}
+
+// @see https://stackoverflow.com/a/1431110/2124254
+function setCharAt(str,index,chr) {
+  if(index > str.length-1) return str;
+  return str.substr(0,index) + chr + str.substr(index+1);
 }
 
 

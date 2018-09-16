@@ -56,8 +56,16 @@ function loadAudio(url) {
  * @param {Event} e - File change event
  */
 async function uploadAudio(e) {
-  menuScene.hide();
-  loadingScene.show();
+  if (gameScene.active) {
+    winScene.hide();
+    gameScene.hide(() => {
+      showTutorialBars = false;
+      loadingScene.show();
+    });
+  }
+  else {
+    menuScene.hide(() => loadingScene.show());
+  }
 
   // clear any previous uploaded song
   URL.revokeObjectURL(objectUrl);
@@ -119,6 +127,10 @@ function generateWaveData() {
   let yCounter = 0;
 
   let isIntroSong = songName === 'AudioDashDefault.mp3';
+  let peakSequence = [Infinity, 8, 4, 2, 1, 1/2, 1/4, 1/8, 1/16, 1/32, 0];
+  let peakDistance = peakSequence[options.peaks*10] * maxLength;
+  let peakCounter = 0;
+
 
   Random.setValues(peaks);
 
@@ -194,10 +206,18 @@ function generateWaveData() {
       let firstObstacleIndex = maxLength * (isIntroSong ? 17 : 3);
 
       // don't create obstacles when the slope of the offset is too large
-      let addObstacle = index > firstObstacleIndex && peak - lowPeak >= peakThreshold && Math.abs(step) < 1.35;
+      let addObstacle = options.peaks &&
+        ++peakCounter > peakDistance &&
+        index > firstObstacleIndex &&
+        peak - lowPeak >= peakThreshold &&
+        Math.abs(step) < 1.35;
       let height = addObstacle
         ? kontra.canvas.height / 2 - Math.max(65, 35 * (1 / peak))
         : 160 + peak * waveHeight + heightStep * index;
+
+      if (addObstacle) {
+        peakCounter = 0;
+      }
 
       // a song that goes from a low peak to a really high peak while the current
       // yOffset is close to the top or bottom needs to drop the yOffset a bit so

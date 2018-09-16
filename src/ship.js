@@ -29,7 +29,15 @@ let ship = kontra.sprite({
       this.dy = this.dy < 0 ? -maxAcc : maxAcc;
     }
 
-    if (this.y > kontra.canvas.height) this.y = kontra.canvas.height
+    // a casual game should also keep the ship on the screen
+    if (options.casual) {
+      if (this.y > kontra.canvas.height - 5) {
+        this.y = kontra.canvas.height - 5;
+      }
+      if (this.y < 5) {
+        this.y = 5;
+      }
+    }
   },
   render(move) {
     if (numUpdates >= 1 && !gameOverScene.active && !winScene.active) {
