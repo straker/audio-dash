@@ -170,18 +170,46 @@ function clamp(value, min, max) {
   return Math.min( Math.max(min, value), max);
 }
 
-function getRandom(min, max) {
-  return Math.random() * (max - min) + min;
+/**
+ * Collision detection between ship and bar
+ * @param {number} shipX - X position of the ship
+ * @param {number} shipY - Y position of the ship
+ * @param {number} barX - X position of the bar
+ * @param {number} barY - Y position of the bar
+ * @param {number} barHeight - Height of the bar after offsets
+ */
+function collides(shipX, shipY, barX, barY, barHeight) {
+  return shipX < barX + waveWidth &&
+         shipX + ship.width > barX &&
+         shipY < barY + barHeight &&
+         shipY + ship.height > barY;
 }
 
-function collidesWithShip(y, height) {
-  return ship.y < y + height && ship.y + ship.height > y;
-}
-
-// @see https://stackoverflow.com/a/1431110/2124254
+/**
+ * Replace a character of a string at the specified index.
+ * @see https://stackoverflow.com/a/1431110/2124254
+ * @param {string} str - String to replace character
+ * @param {number} index - Index of the character to replace
+ * @param {string} chr - Character to replace with
+ */
 function setCharAt(str,index,chr) {
   if(index > str.length-1) return str;
   return str.substr(0,index) + chr + str.substr(index+1);
+}
+
+/**
+ * Set font size.
+ * @param {number} size - Size of font
+ */
+function setFont(size) {
+  ctx.font = size * options.uiScale + "px 'Lucida Console', Monaco, monospace";
+}
+
+/**
+ * Set font measurement
+ */
+function setFontMeasurement() {
+  fontMeasurement = 15 * options.uiScale;
 }
 
 
@@ -232,6 +260,7 @@ function win() {
 // Button
 //------------------------------------------------------------
 let uiSpacer = 5;
+let startY = 170;  // where the first button on scenes typically starts
 
 /**
  * Set the dimensions of the UI element.
@@ -372,12 +401,14 @@ function Text(props) {
     let fontSize = this.size || 25;
     setFont(fontSize);
 
+    // wrap the text string if it grows beyond maxWidth
     if (this.maxWidth && this.width > this.maxWidth) {
 
       let width = text.length * fontMeasurement + fontMeasurement * 2;
       let fontMeasure = fontMeasurement;
       let topText, botText, index;
 
+      // keep replacing spaces with newlines until the width is good
       while (width > this.maxWidth) {
         index = text.lastIndexOf(' ', index ? index-1 : text.length);
         topText = text.substring(0, index);
@@ -493,6 +524,85 @@ function setTranslation(locale) {
 }
 
 setTranslation(options.language);
+//------------------------------------------------------------
+// Scene
+//------------------------------------------------------------
+let scenes = [];
+function Scene(name) {
+
+  // create dom element to hold scene dom elements for screen readers.
+  // this lets me hide the parent element and not each child, which caused
+  // lag
+  let sceneEl = document.createElement('div');
+  sceneEl.hidden = true;
+  uiScenes.appendChild(sceneEl);
+
+  let scene = {
+    name: name,
+    alpha: 0,
+    active: false,
+    children: [],
+    inc: 0.05,
+    isHidding: false,
+
+    // create a fade in/out transitions when hiding and showing scenes
+    hide(cb) {
+      if (focusedBtn) focusedBtn.blur();
+
+      this.isHidding = true;
+      sceneEl.hidden = true;
+      this.alpha = 1;
+      this.inc = -0.05;
+      setTimeout(() => {
+        this.isHidding = false;
+        this.active = false;
+        activeScenes.splice(activeScenes.indexOf(this), 1);
+        cb && cb();
+      }, fadeTime);
+    },
+    show(cb) {
+      this.active = true;
+      sceneEl.hidden = false;
+      activeScenes.push(this);
+      this.alpha = 0;
+      this.inc = 0.05;
+      setTimeout(() => {
+        if (this.onShow) this.onShow();
+        cb && cb();
+      }, fadeTime)
+    },
+    add() {
+      Array.from(arguments).forEach(child => {
+        child.parent = this;
+        this.children.push(child);
+
+        if (child.domEl) {
+          sceneEl.appendChild(child.domEl);
+        }
+      });
+    },
+    update() {
+      this.children.forEach(child => {
+        if (child.update) {
+          child.update()
+        }
+      });
+    },
+    render() {
+      this.alpha = clamp(this.alpha + this.inc, 0, 1);
+
+      ctx.save();
+      ctx.globalAlpha = this.alpha;
+
+      this.children.forEach(child => child.render());
+
+      ctx.restore();
+    }
+  };
+
+  scenes.push(scene);
+  return scene;
+}
 //------------------------------------------------------------
 // Audio functions
 //------------------------------------------------------------
@@ -626,7 +736,6 @@ function generateWaveData() {
   let peakDistance = peakSequence[options.peaks*10] * maxLength;
   let peakCounter = 0;
 
-
   Random.setValues(peaks);
 
   waveData = startBuffer
@@ -713,22 +822,6 @@ function generateWaveData() {
       if (addObstacle) {
         peakCounter = 0;
       }
-
-      // a song that goes from a low peak to a really high peak while the current
-      // yOffset is close to the top or bottom needs to drop the yOffset a bit so
-      // there's enough of a gap between the peaks
-      // if (Math.abs(yOffset) > (minBarDistance - heightStep * index) / 2 &&
-      //     maxPeak - lowPeak > peakThreshold) {
-      //   yOffset += -getSign(yOffset) * 65;
-      //   console.log('hit here');
-      // }
-
-      // a song that goes from a low peak to a really high peak while in an obstacle
-      // would create a spike in the obstacle that is too narrow to pass so we need
-      // to match the height to the others
-      // if (addObstacle && maxPeak - peak > peakThreshold) {
-      //   height = kontra.canvas.height / 2 - Math.max(65, 35 * (1 / maxPeak));
-      // }
 
       return {
         x: index * waveWidth,
@@ -943,20 +1036,6 @@ function showHelpText() {
 
   ctx.restore();
 }
-/**
- * Set font size.
- * @param {number} size - Size of font
- */
-function setFont(size) {
-  ctx.font = size * options.uiScale + "px 'Lucida Console', Monaco, monospace";
-}
-
-/**
- * Set font measurement
- */
-function setFontMeasurement() {
-  fontMeasurement = 15 * options.uiScale;
-}
 //------------------------------------------------------------
 // Input Handlers
 //------------------------------------------------------------
@@ -980,6 +1059,7 @@ window.addEventListener('contextmenu', e => {
 
 /**
  * Detect if a button was clicked.
+ * @param {Event} e - Mouse or touch down event
  */
 function handleOnDown(e) {
   touchPressed = true;
@@ -1073,7 +1153,9 @@ function handleArrowDownUp(inc) {
   }
 }
 
-// select button
+/**
+ * Select the focused button
+ */
 kontra.keys.bind('space', () => {
   lastUsedInput = 'keyboard';
   uploadBtn.disabled = false;
@@ -1083,7 +1165,9 @@ kontra.keys.bind('space', () => {
   }
 });
 
-// move focus button with arrow keys
+/**
+ * move focus button with arrow keys
+ */
 kontra.keys.bind('up', (e) => {
   lastUsedInput = 'keyboard';
   uploadBtn.disabled = false;
@@ -1108,7 +1192,7 @@ kontra.keys.bind('down', (e) => {
 function applyDeadzone(number, threshold){
   percentage = (Math.abs(number) - threshold) / (1 - threshold);
 
-  if(percentage < 0) {
+  if (percentage < 0) {
     percentage = 0;
   }
 
@@ -1220,7 +1304,7 @@ loop = kontra.gameLoop({
 
     activeScenes.forEach(scene => scene.render())
 
-    if (menuScene.active || optionsScene.active || languageScene.active) {
+    if (menuScene.active) {
       showHelpText();
     }
 
@@ -1236,10 +1320,20 @@ loop = kontra.gameLoop({
 });
 
 loop.start();
+/**
+ * Get the sign of a number
+ * @param {number} num
+ */
 function getSign(num) {
   return num < 0 ? -1 : num > 0 ? 1 : 0;
 }
 
+/**
+ * To ensure each song is the same every time it's loaded we can't use true
+ * randomness. Instead, we can use the audio data itself to determine what
+ * numbers to use. Since each song's audio data is unique, each song will
+ * feel random to each other.
+ */
 let Random = {
   values: [],
   value: null,
@@ -1258,6 +1352,8 @@ let Random = {
   getNext: function(num) {
     let sign = getSign(this.value);
 
+    // in case the song produces the same sign a lot, this helps make keep
+    // the path from being stagnant
     if ((sign === -1 && this.numNegatives - this.numPositives > 100) ||
         (sign === 1 && this.numPositives - this.numNegatives > 100)) {
       sign = -sign
@@ -1270,10 +1366,15 @@ let Random = {
       this.numPositives++;
     }
 
+    // generate a number between 0 and num using the current seed
     let rand = sign * (num - num * Math.abs(this.value));
+
+    // take the last two digits of the value and multiply them by 5 to determine
+    // the next peak index to use
     let randIndex = (this.value * 10000 % 100 * 5 | 0);
     let index = this.index - randIndex;
 
+    // go the other direction if the new index is outside the bounds of the array
     if (index < 0 || index > this.values.length - 1) {
       index = this.index + randIndex;
     }
@@ -1283,128 +1384,424 @@ let Random = {
   }
 };
 //------------------------------------------------------------
-// Scene
+// Ship
 //------------------------------------------------------------
-let scenes = [];
-function Scene(name) {
+let ship = kontra.sprite({
+  x: kontra.canvas.width / 2 - waveWidth / 2,
+  y: kontra.canvas.height / 2 - waveWidth / 2,
+  width: waveWidth,
+  height: waveWidth,
+  gravity: 5,
+  points: [],
+  maxAcc: 8,
+  update() {
+    if (kontra.keys.pressed('space') || touchPressed || (gamepad && gamepad.buttons[0].pressed)) {
+      this.ddy = -this.gravity;
 
-  // create dom element to hold scene dom elements for screen readers.
-  // this lets me hide the parent element and not each child, which caused
-  // lag
-  let sceneEl = document.createElement('div');
-  sceneEl.hidden = true;
-  uiScenes.appendChild(sceneEl);
-
-  let scene = {
-    name: name,
-    alpha: 0,
-    active: false,
-    children: [],
-    inc: 0.05,
-    isHidding: false,
-
-    // create a fade in/out transitions when hiding and showing scenes
-    hide(cb) {
-      if (focusedBtn) focusedBtn.blur();
-
-      this.isHidding = true;
-      sceneEl.hidden = true;
-      this.alpha = 1;
-      this.inc = -0.05;
-      setTimeout(() => {
-        this.isHidding = false;
-        this.active = false;
-        activeScenes.splice(activeScenes.indexOf(this), 1);
-        cb && cb();
-      }, fadeTime);
-    },
-    show(cb) {
-      this.active = true;
-      sceneEl.hidden = false;
-      activeScenes.push(this);
-      this.alpha = 0;
-      this.inc = 0.05;
-      setTimeout(() => {
-        if (this.onShow) this.onShow();
-        cb && cb();
-      }, fadeTime)
-    },
-    add() {
-      Array.from(arguments).forEach(child => {
-        child.parent = this;
-        this.children.push(child);
-
-        if (child.domEl) {
-          sceneEl.appendChild(child.domEl);
-        }
-      });
-    },
-    update() {
-      this.children.forEach(child => {
-        if (child.update) {
-          child.update()
-        }
-      });
-    },
-    render() {
-      this.alpha = clamp(this.alpha + this.inc, 0, 1);
-
-      ctx.save();
-      ctx.globalAlpha = this.alpha;
-
-      this.children.forEach(child => child.render());
-
-      ctx.restore();
+      isTutorial = false;
     }
-  };
+    else {
+      this.ddy = this.gravity;
+    }
 
-  scenes.push(scene);
-  return scene;
+    // until the player presses the button don't move the ship with gravity
+    if (isTutorial) return;
+
+    this.y += this.dy;
+    this.dy += this.ddy;
+
+    let maxAcc = this.maxAcc;
+    if (Math.sqrt(this.dy * this.dy) > maxAcc) {
+      this.dy = this.dy < 0 ? -maxAcc : maxAcc;
+    }
+
+    // a casual game should also keep the ship on the screen
+    if (options.casual) {
+      if (this.y > kontra.canvas.height - 5) {
+        this.y = kontra.canvas.height - 5;
+      }
+      if (this.y < 5) {
+        this.y = 5;
+      }
+    }
+  },
+  render(move) {
+
+    // prevent the points array from populating while the ship isn't moving
+    if (numUpdates >= 1 && !gameOverScene.active && !winScene.active) {
+      this.points.push({x: this.x + move, y: this.y + 1});
+    }
+
+    // draw the line red if it hits a wall
+    if (gameOverScene.active) {
+      neonRect(this.x, this.y, this.width, this.height, 255, 0, 0);
+      neonLine(this.points, move, 255, 0, 0);
+    }
+    else {
+      neonRect(this.x, this.y, this.width, this.height, 0, 163, 220);
+      neonLine(this.points, move, 0, 163, 220);
+    }
+  }
+});
+//------------------------------------------------------------
+// Time functions
+//------------------------------------------------------------
+
+/**
+ * Get the time in ss:ms format.
+ * @param {number} time
+ * @returns {string}
+ */
+function getTime(time) {
+  return ('' + ((time * 100 | 0) / 100)).replace('.', ':');
 }
 
+/**
+ * Get seconds from time.
+ * @param {string} time
+ * @returns {string}
+ */
+function getSeconds(time) {
+  if (time.indexOf(':') !== -1) {
+    return time.substr(0, time.indexOf(':'));
+  }
 
+  return '0';
+}
 
+/**
+ * Get milliseconds from time.
+ * @param {string} time
+ * @returns {string}
+ */
+function getMilliseconds(time) {
+  if (time.indexOf(':') !== -1) {
+    return time.substr(time.indexOf(':') + 1);
+  }
 
+  return '0';
+}
 
+/**
+ * Get the best time for the song.
+ */
+function getBestTime() {
+  bestTimes = kontra.store.get('audio-dash:best') || {};
+  bestTime = bestTimes[songName] || '0:00';
+}
+
+/**
+ * Set the best time for the song.
+ */
+function setBestTime() {
+  if (isBetterTime(audio.currentTime)) {
+    bestTime = getTime(audio.currentTime);
+    bestTimes[songName] = bestTime;
+    kontra.store.set('audio-dash:best', bestTimes);
+  }
+}
+
+/**
+ * Check to see if the time is better than the best time.
+ * @param {number} time
+ * @returns {boolean}
+ */
+function isBetterTime(time) {
+  return time > parseInt(bestTime.replace(':', '.'));
+}
+//------------------------------------------------------------
+// Game Over Scene
+//------------------------------------------------------------
+let gameOverScene = Scene('gameOver');
+gameOverScene.add({
+  render() {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+    ctx.fillRect(0, 0, kontra.canvas.width, kontra.canvas.height);
+  }
+});
+let gameOverText = Text({
+  x: kontra.canvas.width / 2,
+  y: kontra.canvas.height / 2 - 150,
+  center: true,
+  text() {
+    return translation.gameOver;
+  },
+  maxWidth: kontra.canvas.width - 100,
+});
+let restartBtn = Button({
+  x: kontra.canvas.width / 2,
+  y: kontra.canvas.height / 2,
+  text() {
+    return translation.restart;
+  },
+  onDown() {
+    showTutorialBars = true;
+    gameOverScene.hide();
+    gameScene.hide(() => start());
+  }
+});
+let menuBtn = Button({
+  x: kontra.canvas.width / 2,
+  prev: restartBtn,
+  text() {
+    return translation.mainMenu;
+  },
+  onDown() {
+    gameScene.hide(() => {
+      showTutorialBars = false;
+    });
+    gameOverScene.hide(() => {
+      menuScene.show(() => startBtn.domEl.focus());
+    });
+  }
+});
+gameOverScene.add(gameOverText, restartBtn, menuBtn);
+//------------------------------------------------------------
+// Game Scene
+//------------------------------------------------------------
+let startMove;
+let startCount;
+let gameScene = Scene('game');
+let shipIndex;
+let lastMove;
+let lastY;
+gameScene.add({
+  render() {
+    // context.currentTime would be as long as the audio took to load, so was
+    // always off. seems it's not meant for large files. better to use audio
+    // element and play it right on time
+    // @see https://stackoverflow.com/questions/33006650/web-audio-api-and-real-current-time-when-playing-an-audio-file
+
+    // calculate speed of the audio wave based on the current time
+    let move, startIndex = 0, ampBar, collisionIndex;
+    if (audio.currentTime) {
+      move = Math.round((audio.currentTime / audio.duration) * (peaks.length * waveWidth));
+      startIndex = move / waveWidth | 0;
+    }
+    else {
+      move = startMove + tutorialMoveInc * startCount;
+
+      if (!gameOverScene.active) {
+        startCount++;
+
+        if (move >= 0) {
+          showTutorialBars = false;
+          audio.play();
+        }
+      }
+    }
+
+    let dx = move - lastMove;
+    shipIndex = startIndex + maxLength / 2;
+
+    // only draw the bars on the screen
+    for (let i = startIndex; i < startIndex + maxLength && waveData[i]; i++) {
+      let wave = waveData[i];
+      let x = wave.x - move;
+
+      let topY = wave.y;
+      let botY = kontra.canvas.height - wave.height - wave.offset + wave.yOffset;
+      let topHeight = wave.height - wave.offset + wave.yOffset;
+      let botHeight = wave.height + wave.offset - wave.yOffset;
+
+      // detect all bars the ship could have moved through and see if it collided
+      // with it at the point in time
+      if (!gameOverScene.active && !options.casual &&
+          x >= ship.x - dx && x <= ship.x) {
+        collisionIndex = collisionIndex || i;
+        dy = ship.y - lastY;
+        let numBars = dx / waveWidth | 0;
+        let yStep = dy / numBars;
+        let step = i - collisionIndex;
+        let shipX = (ship.x - dx) + waveWidth * step;
+        let shipY = lastY + yStep * step;
+
+        if (collides(shipX, shipY, x, topY, topHeight) ||
+            collides(shipX, shipY, x, botY, botHeight) ||
+            ship.y < -50 ||
+            ship.y > kontra.canvas.height + 50) {
+          ship.render(move);  // render the ship to get the last point on before game over
+          gameOver();
+        }
+      }
+
+      // keep track of the amp bar
+      if (x > waveWidth * (maxLength / 2 - 1) && x < waveWidth * (maxLength / 2 + 1)) {
+        ampBar = wave;
+      }
+      else {
+        ctx.fillStyle = '#00a3dc';
+        ctx.fillRect(x, topY, wave.width, topHeight);  // top bar
+        ctx.fillRect(x, botY, wave.width, botHeight);  // bottom bar
+      }
+    }
+
+    // draw amp bar
+    if (ampBar) {
+      let x = ampBar.x - move - waveWidth;
+      let width = ampBar.width + waveWidth * 2;
+      let topY = ampBar.y;
+      let botY = kontra.canvas.height - ampBar.height - ampBar.offset + ampBar.yOffset;
+      let topHeight = ampBar.height - ampBar.offset + ampBar.yOffset;
+      let botHeight = ampBar.height + ampBar.offset - ampBar.yOffset;
+
+      neonRect(x, topY, width, topHeight, 255, 0, 0);
+      neonRect(x, botY, width, botHeight, 255, 0, 0);
+    }
+
+    ship.render(move);
+
+    while (ship.points.length && ship.points[0].x - move < 0 - ship.width) {
+      ship.points.shift();
+    }
+
+    drawTimeUi();
+
+    if (!winScene.active && waveData[waveData.length - 1].x - move <= kontra.canvas.width / 2) {
+      win();
+    }
+
+    lastMove = move;
+    lastY = ship.y;
+  }
+});
+//------------------------------------------------------------
+// Language Scene
+//------------------------------------------------------------
+let languageScene = Scene('language');
+let firstBtn;
+languageScene.onShow = () => {
+  for (let i = 0, child; child = languageScene.children[i]; i++) {
+    if (child.name === options.language) {
+      child.domEl.focus();
+      break;
+    }
+  }
+};
+
+languageScene.add(Text({
+  x: kontra.canvas.width / 2,
+  y: 90,
+  size: 50,
+  center: true,
+  maxWidth: kontra.canvas.width - 100,
+  text() {
+    return translation.language;
+  }
+}));
+
+Object.keys(translations).forEach((language, index) => {
+  let btn = Button({
+    x: kontra.canvas.width / 2,
+    y: firstBtn ? null : startY,
+    prev: firstBtn,
+    center: true,
+    name: language,
+    text() {
+      return translations[language]._name_;
+    },
+    onDown() {
+      languageScene.hide(() => {
+        options.language = language;
+        setTranslation(language);
+        optionsScene.show(() => lastOptionBtn.domEl.focus());
+      });
+    }
+  });
+
+  if (index === 0) {
+    firstBtn = btn;
+  }
+
+  languageScene.add(btn);
+});
+let languageCancelBtn = Button({
+  x: kontra.canvas.width / 2,
+  prev: languageScene.children[languageScene.children.length-1],
+  margin: 45,
+  text() {
+    return translation.cancel;
+  },
+  onDown() {
+    languageScene.hide(() => {
+      optionsScene.show(() => lastOptionBtn.domEl.focus());
+    });
+  }
+});
+languageScene.add(languageCancelBtn);
+//------------------------------------------------------------
+// Loading Scene
+//------------------------------------------------------------
+let loadingScene = Scene('upload');
+let loadingTimer = 0;
+
+loadingScene.onShow = () => {
+  loadingTimer = 0;
+}
+
+let loadingText = Text({
+  x: kontra.canvas.width / 2,
+  y: kontra.canvas.height / 2,
+  center: true,
+  text() {
+    ++loadingTimer;
+    let text = translation.loading + '   ';
+    if (loadingTimer >= 60) {
+      text = setCharAt(text, text.length - 3, '.');
+    }
+    if (loadingTimer >= 120) {
+      text = setCharAt(text, text.length - 2, '.');
+    }
+    if (loadingTimer >= 180) {
+      text = setCharAt(text, text.length - 1, '.');
+    }
+    if (loadingTimer >= 240) {
+      loadingTimer = 0;
+    }
+
+    return text;
+  }
+});
+loadingScene.add(loadingText);
 //------------------------------------------------------------
 // Menu Scene
 //------------------------------------------------------------
 let menuScene = Scene('menu');
 menuScene.add({
+  // treat the logo as a single unit so we can move the entire thing together
+  x: 50,
+  y: 100,
   render() {
     ctx.save();
     ctx.globalAlpha = this.parent.alpha;
+    ctx.translate(this.x, this.y);
 
     let points = [
-      {x: 50, y: 262},
-
-      {x: 80, y: 262},
-      {x: 88, y: 270},
-      {x: 96, y: 278},
-      {x: 104, y: 281},
-      {x: 112, y: 279},
-      {x: 120, y: 272},
-
-      {x: 128, y: 264},
-
-      {x: 136, y: 256},
-      {x: 144, y: 249},
-      {x: 152, y: 247},
-      {x: 160, y: 250},
-      {x: 168, y: 258},
-      {x: 176, y: 266},
-
-      {x: 206, y: 266}
+      {x: 0, y: 162},
+      {x: 30, y: 162},
+      {x: 38, y: 170},
+      {x: 46, y: 178},
+      {x: 54, y: 181},
+      {x: 62, y: 179},
+      {x: 70, y: 172},
+      {x: 78, y: 164},
+      {x: 86, y: 156},
+      {x: 94, y: 149},
+      {x: 102, y: 147},
+      {x: 110, y: 150},
+      {x: 118, y: 158},
+      {x: 126, y: 166},
+      {x: 156, y: 166}
     ];
 
     neonLine(points, 0, 0, 163, 220);
     ctx.font = "150px 'Lucida Console', Monaco, monospace"
-    neonText('AUDIO', 50, 200, 0, 163, 220);
-    neonText('DASH', 231, 315, 255, 0, 0);
+    neonText('AUDIO', 0, 100, 0, 163, 220);
+    neonText('DASH', 181, 215, 255, 0, 0);
 
     ctx.fillStyle = '#fff';
     ctx.font = "30px 'Lucida Console', Monaco, monospace"
-    ctx.fillText('Ride the Audio Wave', 140, 360);
+    ctx.fillText('Ride Your Music', 145, 260);
 
     ctx.restore();
   }
@@ -1446,50 +1843,6 @@ let optionsBtn = Button({
   }
 });
 menuScene.add(startBtn, uploadBtn, optionsBtn);
-
-
-
-
-
-//------------------------------------------------------------
-// Loading Scene
-//------------------------------------------------------------
-let loadingScene = Scene('upload');
-let loadingTimer = 0;
-
-loadingScene.onShow = () => {
-  loadingTimer = 0;
-}
-
-let loadingText = Text({
-  x: kontra.canvas.width / 2,
-  y: kontra.canvas.height / 2,
-  center: true,
-  text() {
-    ++loadingTimer;
-    let text = translation.loading + '   ';
-    if (loadingTimer >= 60) {
-      text = setCharAt(text, text.length - 3, '.');
-    }
-    if (loadingTimer >= 120) {
-      text = setCharAt(text, text.length - 2, '.');
-    }
-    if (loadingTimer >= 180) {
-      text = setCharAt(text, text.length - 1, '.');
-    }
-    if (loadingTimer >= 240) {
-      loadingTimer = 0;
-    }
-
-    return text;
-  }
-});
-loadingScene.add(loadingText);
-
-
-
-
-
 //------------------------------------------------------------
 // Options Scene
 //------------------------------------------------------------
@@ -1554,7 +1907,6 @@ optionsScene.onShow = () => {
   }
 };
 
-let startY = 170;
 let optionTexts = [];
 
 optionsScene.add(Text({
@@ -1671,6 +2023,7 @@ let cancelBtn = Button({
     optionsScene.hide(() => {
       lastOptionBtn = null;
       options = beforeOptions;
+      setTranslation(options.language);
       setFontMeasurement();
       menuScene.show(() => startBtn.domEl.focus());
     });
@@ -1697,80 +2050,6 @@ let saveBtn = Button({
   }
 });
 optionsScene.add(cancelBtn, saveBtn);
-
-
-
-
-
-//------------------------------------------------------------
-// Language Scene
-//------------------------------------------------------------
-let languageScene = Scene('language');
-let firstBtn;
-languageScene.onShow = () => {
-  for (let i = 0, child; child = languageScene.children[i]; i++) {
-    if (child.name === options.language) {
-      child.domEl.focus();
-      break;
-    }
-  }
-};
-
-languageScene.add(Text({
-  x: kontra.canvas.width / 2,
-  y: 90,
-  size: 50,
-  center: true,
-  maxWidth: kontra.canvas.width - 100,
-  text() {
-    return translation.language;
-  }
-}));
-
-Object.keys(translations).forEach((language, index) => {
-  let btn = Button({
-    x: kontra.canvas.width / 2,
-    y: firstBtn ? null : startY,
-    prev: firstBtn,
-    center: true,
-    name: language,
-    text() {
-      return translations[language]._name_;
-    },
-    onDown() {
-      languageScene.hide(() => {
-        options.language = language;
-        setTranslation(language);
-        optionsScene.show(() => lastOptionBtn.domEl.focus());
-      });
-    }
-  });
-
-  if (index === 0) {
-    firstBtn = btn;
-  }
-
-  languageScene.add(btn);
-});
-let languageCancelBtn = Button({
-  x: kontra.canvas.width / 2,
-  prev: languageScene.children[languageScene.children.length-1],
-  margin: 45,
-  text() {
-    return translation.cancel;
-  },
-  onDown() {
-    languageScene.hide(() => {
-      optionsScene.show(() => lastOptionBtn.domEl.focus());
-    });
-  }
-});
-languageScene.add(languageCancelBtn);
-
-
-
-
-
 //------------------------------------------------------------
 // Tutorial Scene
 //------------------------------------------------------------
@@ -1799,160 +2078,6 @@ let tutorialText = Text({
   }
 });
 tutorialScene.add(tutorialText);
-
-
-
-
-
-//------------------------------------------------------------
-// Game Scene
-//------------------------------------------------------------
-let startMove;
-let startCount;
-let gameScene = Scene('game');
-let shipIndex;
-gameScene.add({
-  render() {
-    // context.currentTime would be as long as the audio took to load, so was
-    // always off. seems it's not meant for large files. better to use audio
-    // element and play it right on time
-    // @see https://stackoverflow.com/questions/33006650/web-audio-api-and-real-current-time-when-playing-an-audio-file
-
-    // calculate speed of the audio wave based on the current time
-    let move, startIndex = 0, ampBar;
-    if (audio.currentTime) {
-      move = Math.round((audio.currentTime / audio.duration) * (peaks.length * waveWidth));
-      startIndex = move / waveWidth | 0;
-    }
-    else {
-      move = startMove + tutorialMoveInc * startCount;
-
-      if (!gameOverScene.active) {
-        startCount++;
-
-        if (move >= 0) {
-          showTutorialBars = false;
-          audio.play();
-        }
-      }
-    }
-
-    shipIndex = startIndex + maxLength / 2;
-
-    // only draw the bars on the screen
-    for (let i = startIndex; i < startIndex + maxLength && waveData[i]; i++) {
-      let wave = waveData[i];
-      let x = wave.x - move;
-
-      let topY = wave.y;
-      let botY = kontra.canvas.height - wave.height - wave.offset + wave.yOffset;
-      let topHeight = wave.height - wave.offset + wave.yOffset;
-      let botHeight = wave.height + wave.offset - wave.yOffset;
-
-      // keep track of the amp bar
-      if (x > waveWidth * (maxLength / 2 - 1) && x < waveWidth * (maxLength / 2 + 1)) {
-        ampBar = wave;
-
-        // collision detection
-        if (!gameOverScene.active && !options.casual) {
-          if (collidesWithShip(topY, topHeight) ||
-              collidesWithShip(botY, botHeight) ||
-              ship.y < -50 ||
-              ship.y > kontra.canvas.height + 50) {
-            return gameOver();
-          }
-        }
-      }
-      else {
-        ctx.fillStyle = '#00a3dc';
-        ctx.fillRect(x, topY, wave.width, topHeight);  // top bar
-        ctx.fillRect(x, botY, wave.width, botHeight);  // bottom bar
-      }
-    }
-
-    // draw amp bar
-    if (ampBar) {
-      let x = ampBar.x - move - waveWidth;
-      let width = ampBar.width + waveWidth * 2;
-      let topY = ampBar.y;
-      let botY = kontra.canvas.height - ampBar.height - ampBar.offset + ampBar.yOffset;
-      let topHeight = ampBar.height - ampBar.offset + ampBar.yOffset;
-      let botHeight = ampBar.height + ampBar.offset - ampBar.yOffset;
-
-      neonRect(x, topY, width, topHeight, 255, 0, 0);
-      neonRect(x, botY, width, botHeight, 255, 0, 0);
-    }
-
-    ship.render(move);
-
-    while (ship.points.length && ship.points[0].x - move < 0 - ship.width) {
-      ship.points.shift();
-    }
-
-    drawTimeUi();
-
-    if (!winScene.active && waveData[waveData.length - 1].x - move <= kontra.canvas.width / 2) {
-      win();
-    }
-  }
-});
-
-
-
-
-
-//------------------------------------------------------------
-// Game Over Scene
-//------------------------------------------------------------
-let gameOverScene = Scene('gameOver');
-gameOverScene.add({
-  render() {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
-    ctx.fillRect(0, 0, kontra.canvas.width, kontra.canvas.height);
-  }
-});
-let gameOverText = Text({
-  x: kontra.canvas.width / 2,
-  y: kontra.canvas.height / 2 - 150,
-  center: true,
-  text() {
-    return translation.gameOver;
-  },
-  maxWidth: kontra.canvas.width - 100,
-});
-let restartBtn = Button({
-  x: kontra.canvas.width / 2,
-  y: kontra.canvas.height / 2,
-  text() {
-    return translation.restart;
-  },
-  onDown() {
-    showTutorialBars = true;
-    gameOverScene.hide();
-    gameScene.hide(() => start());
-  }
-});
-let menuBtn = Button({
-  x: kontra.canvas.width / 2,
-  prev: restartBtn,
-  text() {
-    return translation.mainMenu;
-  },
-  onDown() {
-    gameScene.hide(() => {
-      showTutorialBars = false;
-    });
-    gameOverScene.hide(() => {
-      menuScene.show(() => startBtn.domEl.focus());
-    });
-  }
-});
-gameOverScene.add(gameOverText, restartBtn, menuBtn);
-
-
-
-
-
 //------------------------------------------------------------
 // Win Scene
 //------------------------------------------------------------
@@ -1996,122 +2121,6 @@ let winUploadBtn = Button({
   }
 });
 winScene.add(winText, winMenuBtn, winUploadBtn);
-//------------------------------------------------------------
-// Ship
-//------------------------------------------------------------
-let ship = kontra.sprite({
-  x: kontra.canvas.width / 2 - waveWidth / 2,
-  y: kontra.canvas.height / 2 - waveWidth / 2,
-  width: waveWidth,
-  height: waveWidth,
-  gravity: 5,
-  points: [],
-  maxAcc: 8,
-  update() {
-    if (kontra.keys.pressed('space') || touchPressed || (gamepad && gamepad.buttons[0].pressed)) {
-      this.ddy = -this.gravity;
-
-      isTutorial = false;
-    }
-    else {
-      this.ddy = this.gravity;
-    }
-
-    if (isTutorial) return;
-
-    this.y += this.dy;
-    this.dy += this.ddy;
-
-    let maxAcc = this.maxAcc// / (1 / audio.playbackRate);
-    if (Math.sqrt(this.dy * this.dy) > maxAcc) {
-      this.dy = this.dy < 0 ? -maxAcc : maxAcc;
-    }
-
-    // a casual game should also keep the ship on the screen
-    if (options.casual) {
-      if (this.y > kontra.canvas.height - 5) {
-        this.y = kontra.canvas.height - 5;
-      }
-      if (this.y < 5) {
-        this.y = 5;
-      }
-    }
-  },
-  render(move) {
-    if (numUpdates >= 1 && !gameOverScene.active && !winScene.active) {
-      this.points.push({x: this.x + move, y: this.y + 1});
-    }
-
-    neonRect(this.x, this.y, this.width, this.height, 0, 163, 220);
-    neonLine(this.points, move, 0, 163, 220);
-  }
-});
-//------------------------------------------------------------
-// Time functions
-//------------------------------------------------------------
-
-/**
- * Get the time in ss:ms format.
- * @param {number} time
- * @returns {string}
- */
-function getTime(time) {
-  return ('' + ((time * 100 | 0) / 100)).replace('.', ':');
-}
-
-/**
- * Get seconds from time.
- * @param {string} time
- * @returns {string}
- */
-function getSeconds(time) {
-  if (time.indexOf(':') !== -1) {
-    return time.substr(0, time.indexOf(':'));
-  }
-
-  return '0';
-}
-
-/**
- * Get milliseconds from time.
- * @param {string} time
- * @returns {string}
- */
-function getMilliseconds(time) {
-  if (time.indexOf(':') !== -1) {
-    return time.substr(time.indexOf(':') + 1);
-  }
-
-  return '0';
-}
-
-/**
- * Get the best time for the song.
- */
-function getBestTime() {
-  bestTimes = kontra.store.get('audio-dash:best') || {};
-  bestTime = bestTimes[songName] || '0:00';
-}
-
-/**
- * Set the best time for the song.
- */
-function setBestTime() {
-  if (isBetterTime(audio.currentTime)) {
-    bestTime = getTime(audio.currentTime);
-    bestTimes[songName] = bestTime;
-    kontra.store.set('audio-dash:best', bestTimes);
-  }
-}
-
-/**
- * Check to see if the time is better than the best time.
- * @param {number} time
- * @returns {boolean}
- */
-function isBetterTime(time) {
-  return time > parseInt(bestTime.replace(':', '.'));
-}
 async function main() {
   setFontMeasurement();
   getBestTime();

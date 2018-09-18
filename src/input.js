@@ -21,6 +21,7 @@ window.addEventListener('contextmenu', e => {
 
 /**
  * Detect if a button was clicked.
+ * @param {Event} e - Mouse or touch down event
  */
 function handleOnDown(e) {
   touchPressed = true;
@@ -114,7 +115,9 @@ function handleArrowDownUp(inc) {
   }
 }
 
-// select button
+/**
+ * Select the focused button
+ */
 kontra.keys.bind('space', () => {
   lastUsedInput = 'keyboard';
   uploadBtn.disabled = false;
@@ -124,7 +127,9 @@ kontra.keys.bind('space', () => {
   }
 });
 
-// move focus button with arrow keys
+/**
+ * move focus button with arrow keys
+ */
 kontra.keys.bind('up', (e) => {
   lastUsedInput = 'keyboard';
   uploadBtn.disabled = false;
@@ -149,7 +154,7 @@ kontra.keys.bind('down', (e) => {
 function applyDeadzone(number, threshold){
   percentage = (Math.abs(number) - threshold) / (1 - threshold);
 
-  if(percentage < 0) {
+  if (percentage < 0) {
     percentage = 0;
   }
 

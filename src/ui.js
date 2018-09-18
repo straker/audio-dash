@@ -2,6 +2,7 @@
 // Button
 //------------------------------------------------------------
 let uiSpacer = 5;
+let startY = 170;  // where the first button on scenes typically starts
 
 /**
  * Set the dimensions of the UI element.
@@ -142,12 +143,14 @@ function Text(props) {
     let fontSize = this.size || 25;
     setFont(fontSize);
 
+    // wrap the text string if it grows beyond maxWidth
     if (this.maxWidth && this.width > this.maxWidth) {
 
       let width = text.length * fontMeasurement + fontMeasurement * 2;
       let fontMeasure = fontMeasurement;
       let topText, botText, index;
 
+      // keep replacing spaces with newlines until the width is good
       while (width > this.maxWidth) {
         index = text.lastIndexOf(' ', index ? index-1 : text.length);
         topText = text.substring(0, index);

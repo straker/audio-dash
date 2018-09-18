@@ -56,18 +56,46 @@ function clamp(value, min, max) {
   return Math.min( Math.max(min, value), max);
 }
 
-function getRandom(min, max) {
-  return Math.random() * (max - min) + min;
+/**
+ * Collision detection between ship and bar
+ * @param {number} shipX - X position of the ship
+ * @param {number} shipY - Y position of the ship
+ * @param {number} barX - X position of the bar
+ * @param {number} barY - Y position of the bar
+ * @param {number} barHeight - Height of the bar after offsets
+ */
+function collides(shipX, shipY, barX, barY, barHeight) {
+  return shipX < barX + waveWidth &&
+         shipX + ship.width > barX &&
+         shipY < barY + barHeight &&
+         shipY + ship.height > barY;
 }
 
-function collidesWithShip(y, height) {
-  return ship.y < y + height && ship.y + ship.height > y;
-}
-
-// @see https://stackoverflow.com/a/1431110/2124254
+/**
+ * Replace a character of a string at the specified index.
+ * @see https://stackoverflow.com/a/1431110/2124254
+ * @param {string} str - String to replace character
+ * @param {number} index - Index of the character to replace
+ * @param {string} chr - Character to replace with
+ */
 function setCharAt(str,index,chr) {
   if(index > str.length-1) return str;
   return str.substr(0,index) + chr + str.substr(index+1);
+}
+
+/**
+ * Set font size.
+ * @param {number} size - Size of font
+ */
+function setFont(size) {
+  ctx.font = size * options.uiScale + "px 'Lucida Console', Monaco, monospace";
+}
+
+/**
+ * Set font measurement
+ */
+function setFontMeasurement() {
+  fontMeasurement = 15 * options.uiScale;
 }
 
 

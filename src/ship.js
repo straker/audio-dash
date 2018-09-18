@@ -19,12 +19,13 @@ let ship = kontra.sprite({
       this.ddy = this.gravity;
     }
 
+    // until the player presses the button don't move the ship with gravity
     if (isTutorial) return;
 
     this.y += this.dy;
     this.dy += this.ddy;
 
-    let maxAcc = this.maxAcc// / (1 / audio.playbackRate);
+    let maxAcc = this.maxAcc;
     if (Math.sqrt(this.dy * this.dy) > maxAcc) {
       this.dy = this.dy < 0 ? -maxAcc : maxAcc;
     }
@@ -40,11 +41,20 @@ let ship = kontra.sprite({
     }
   },
   render(move) {
+
+    // prevent the points array from populating while the ship isn't moving
     if (numUpdates >= 1 && !gameOverScene.active && !winScene.active) {
       this.points.push({x: this.x + move, y: this.y + 1});
     }
 
-    neonRect(this.x, this.y, this.width, this.height, 0, 163, 220);
-    neonLine(this.points, move, 0, 163, 220);
+    // draw the line red if it hits a wall
+    if (gameOverScene.active) {
+      neonRect(this.x, this.y, this.width, this.height, 255, 0, 0);
+      neonLine(this.points, move, 255, 0, 0);
+    }
+    else {
+      neonRect(this.x, this.y, this.width, this.height, 0, 163, 220);
+      neonLine(this.points, move, 0, 163, 220);
+    }
   }
 });

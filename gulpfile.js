@@ -25,7 +25,7 @@ const terser = require('gulp-terser');
 // }
 
 gulp.task('build:js', function() {
-  return gulp.src(['src/kontra.js', 'src/wavesurfer.js', 'src/globals.js', 'src/ui.js', 'src/translations.js', 'src/*.js', '!src/main.js'])
+  return gulp.src(['src/kontra.js', 'src/wavesurfer.js', 'src/globals.js', 'src/ui.js', 'src/translations.js', 'src/scenes/index.js', 'src/**/*.js', '!src/main.js'])
     .pipe(addsrc.append('src/main.js'))
     .pipe(concat('index.js'))
     .pipe(gulp.dest('.'))
@@ -51,6 +51,7 @@ gulp.task('dist:js', function() {
     .pipe(terser())
     .pipe(plumber.stop())
     .pipe(size({
+      showFiles: true,
       gzip: true
     }))
     .pipe(gulp.dest('dist'));
@@ -58,22 +59,34 @@ gulp.task('dist:js', function() {
 
 gulp.task('dist:html', function() {
   return gulp.src('index.html')
-    .pipe(htmlmin())
+    .pipe(htmlmin({
+      collapseWhitespace: true,
+      minifyCSS: true,
+      minifyJS: true,
+      removeComments: true,
+      removeEmptyAttributes: true,
+      removeRedundantAttributes: true
+    }))
     .pipe(size({
+      showFiles: true,
       gzip: true
     }))
-    .pipe('dist');
+    .pipe(gulp.dest('dist'));
 });
 
 gulp.task('dist:audio', function() {
   return gulp.src('AudioDashDefault.mp3')
-    .pipe('dist');
+    .pipe(size({
+      showFiles: true,
+      gzip: true
+    }))
+    .pipe(gulp.dest('dist'));
 });
 
 gulp.task('dist', ['dist:js', 'dist:html', 'dist:audio']);
 
 gulp.task('watch', function() {
-  gulp.watch('src/*.js', ['build:js']);
+  gulp.watch('src/**/*.js', ['build:js']);
 });
 
 gulp.task('default', ['build:js']);

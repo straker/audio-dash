@@ -131,7 +131,6 @@ function generateWaveData() {
   let peakDistance = peakSequence[options.peaks*10] * maxLength;
   let peakCounter = 0;
 
-
   Random.setValues(peaks);
 
   waveData = startBuffer
@@ -218,22 +217,6 @@ function generateWaveData() {
       if (addObstacle) {
         peakCounter = 0;
       }
-
-      // a song that goes from a low peak to a really high peak while the current
-      // yOffset is close to the top or bottom needs to drop the yOffset a bit so
-      // there's enough of a gap between the peaks
-      // if (Math.abs(yOffset) > (minBarDistance - heightStep * index) / 2 &&
-      //     maxPeak - lowPeak > peakThreshold) {
-      //   yOffset += -getSign(yOffset) * 65;
-      //   console.log('hit here');
-      // }
-
-      // a song that goes from a low peak to a really high peak while in an obstacle
-      // would create a spike in the obstacle that is too narrow to pass so we need
-      // to match the height to the others
-      // if (addObstacle && maxPeak - peak > peakThreshold) {
-      //   height = kontra.canvas.height / 2 - Math.max(65, 35 * (1 / maxPeak));
-      // }
 
       return {
         x: index * waveWidth,
