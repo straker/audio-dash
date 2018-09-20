@@ -36,7 +36,7 @@ menuScene.add({
 
     ctx.fillStyle = '#fff';
     ctx.font = "30px 'Lucida Console', Monaco, monospace"
-    ctx.fillText('Ride Your Music', 145, 260);
+    ctx.fillText('Ride the Waves of Your Music', 15, 260);
 
     ctx.restore();
   }

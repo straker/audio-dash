@@ -7,6 +7,7 @@ let gameScene = Scene('game');
 let shipIndex;
 let lastMove;
 let lastY;
+let slowStartInc;
 gameScene.add({
   render() {
     // context.currentTime would be as long as the audio took to load, so was
@@ -16,9 +17,20 @@ gameScene.add({
 
     // calculate speed of the audio wave based on the current time
     let move, startIndex = 0, ampBar, collisionIndex;
-    if (audio.currentTime) {
+    if (audio.currentTime || !audio.paused) {
       move = Math.round((audio.currentTime / audio.duration) * (peaks.length * waveWidth));
       startIndex = move / waveWidth | 0;
+
+      // prevent the ship from jumping at the beginning due to a difference in
+      // speed and the audio being slow to start by slowing reducing the move speed
+      // to match up with the audio
+      let priorMove = Math.round(slowStartInc * ++startCount);
+      if (audio.currentTime < 1 && move < priorMove && !audio.paused) {
+        console.log('\nmove:', move);
+        console.log('priorMove:', priorMove);
+        move = priorMove;
+        slowStartInc -= 0.05;
+      }
     }
     else {
       move = startMove + tutorialMoveInc * startCount;
@@ -27,6 +39,8 @@ gameScene.add({
         startCount++;
 
         if (move >= 0) {
+          startCount = 0;
+          slowStartInc = tutorialMoveInc;
           showTutorialBars = false;
           audio.play();
         }

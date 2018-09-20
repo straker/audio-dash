@@ -3,7 +3,7 @@
 //------------------------------------------------------------
 let isTutorial = true;
 let tutorialMove = 0;
-let tutorialMoveInc = 5;
+let tutorialMoveIncStart = 5;
 let showTutorialBars = false;
 
 let tutorialScene = Scene('tutorial');

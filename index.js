@@ -212,6 +212,14 @@ function setFontMeasurement() {
   fontMeasurement = 15 * options.uiScale;
 }
 
+/**
+ * Set the game language.
+ * @param {string} locale - locale code
+ */
+function setLanguage(locale) {
+  translation = translations[locale] || translations.en;
+}
+
 
 
 
@@ -234,6 +242,7 @@ function start() {
   ship.points = [];
   ship.y = mid;
 
+  tutorialMoveInc = tutorialMoveIncStart * audio.playbackRate;
   showTutorialBars = true;
   isTutorial = true;
   tutorialScene.show();
@@ -448,82 +457,8 @@ function Text(props) {
 
   return text;
 }
-let translations = {
-  en: {
-    "_name_": "English",
-    "start": "Start",
-    "upload": "Upload Song",
-    "options": "Options",
-    "spacebar": "[Spacebar]",
-    "select": "Select",
-    "volume": "Volume",
-    "increase_volume": "Increase Volume",
-    "decrease_volume": "Decrease Volume",
-    "uiScale": "UI Scale",
-    "increase_uiScale": "Increase UI Scale",
-    "decrease_uiScale": "Decrease UI Scale",
-    "gameSpeed": "Game Speed",
-    "increase_gameSpeed": "Increase Game Speed",
-    "decrease_gameSpeed": "Decrease Game Speed",
-    "peaks": "Peaks",
-    "increase_peaks": "Increase Peaks",
-    "decrease_peaks": "Decrease Peaks",
-    "casual": "Casual",
-    "on_casual": "Turn on Casual",
-    "off_casual": "Turn off Casual",
-    "language": "Language",
-    "save": "Save",
-    "cancel": "Cancel",
-    "time": "TIME",
-    "best": "BEST",
-    "tapHold": "Tap or Hold",
-    "gameOver": "Game Over",
-    "restart": "Restart",
-    "mainMenu": "Main Menu",
-    "completed": "Song Completed!",
-    "loading": "Loading"
-  },
-  es: {
-    "_name_": "Español",
-    "start": "INICIO",
-    "upload": "SUBIR CANCIÓN",
-    "options": "OPCIONES",
-    "spacebar": "[barra espaciadora]",
-    "select": "Seleccionar",
-    "volume": "VOLUMEN",
-    "increase_volume": "Incrementar Volumen",
-    "decrease_volume": "Disminuir volumen",
-    "uiScale": "ESCALA UI",
-    "increase_uiScale": "Aumentar la escala UI",
-    "decrease_uiScale": "Disminuir la escala UI",
-    "gameSpeed": "VELOCIDAD DEL JUEGO",
-    "increase_gameSpeed": "Aumentar la velocidad del juego",
-    "decrease_gameSpeed": "Disminuir la velocidad del juego",
-    "peaks": "Peaks",
-    "increase_peaks": "Increase Peaks",
-    "decrease_peaks": "Decrease Peaks",
-    "casual": "Casual",
-    "on_casual": "Turn on Casual",
-    "off_casual": "Turn off Casual",
-    "language": "Idioma",
-    "save": "GUARDAR",
-    "cancel": "CANCELAR",
-    "time": "TIEMPO",
-    "best": "MAJOR",
-    "tapHold": "PRESSAR O FIJAR",
-    "gameOver": "JUEGO SE TERMINO",
-    "restart": "REINICIAR",
-    "mainMenu": "MENÚ PRINCIPAL",
-    "completed": "¡CANCIÓN COMPLETADA!",
-    "loading": "LoadingES"
-  }
-};
-
-function setTranslation(locale) {
-  translation = translations[locale] || translations.en;
-}
-
-setTranslation(options.language);
+translations = {"en":{"_name_":"English","start":"Start","upload":"Upload Song","options":"Options","spacebar":"[Spacebar]","select":"Select","volume":"Volume","increase_volume":"Increase Volume","decrease_volume":"Decrease Volume","uiScale":"UI Scale","increase_uiScale":"Increase UI Scale","decrease_uiScale":"Decrease UI Scale","gameSpeed":"Game Speed","increase_gameSpeed":"Increase Game Speed","decrease_gameSpeed":"Decrease Game Speed","peaks":"Peaks","increase_peaks":"Increase Peaks","decrease_peaks":"Decrease Peaks","casual":"Casual","on_casual":"Turn on Casual","off_casual":"Turn off Casual","language":"Language","save":"Save","cancel":"Cancel","time":"TIME","best":"BEST","tapHold":"Tap or Hold","gameOver":"Game Over","restart":"Restart","mainMenu":"Main Menu","completed":"Song Completed!","loading":"Loading"}};
+setLanguage(options.language);
 //------------------------------------------------------------
 // Scene
 //------------------------------------------------------------
@@ -1521,8 +1456,9 @@ gameOverScene.add({
 });
 let gameOverText = Text({
   x: kontra.canvas.width / 2,
-  y: kontra.canvas.height / 2 - 150,
+  y: kontra.canvas.height / 2 - 200,
   center: true,
+  size: 50,
   text() {
     return translation.gameOver;
   },
@@ -1565,6 +1501,7 @@ let gameScene = Scene('game');
 let shipIndex;
 let lastMove;
 let lastY;
+let slowStartInc;
 gameScene.add({
   render() {
     // context.currentTime would be as long as the audio took to load, so was
@@ -1574,9 +1511,20 @@ gameScene.add({
 
     // calculate speed of the audio wave based on the current time
     let move, startIndex = 0, ampBar, collisionIndex;
-    if (audio.currentTime) {
+    if (audio.currentTime || !audio.paused) {
       move = Math.round((audio.currentTime / audio.duration) * (peaks.length * waveWidth));
       startIndex = move / waveWidth | 0;
+
+      // prevent the ship from jumping at the beginning due to a difference in
+      // speed and the audio being slow to start by slowing reducing the move speed
+      // to match up with the audio
+      let priorMove = Math.round(slowStartInc * ++startCount);
+      if (audio.currentTime < 1 && move < priorMove && !audio.paused) {
+        console.log('\nmove:', move);
+        console.log('priorMove:', priorMove);
+        move = priorMove;
+        slowStartInc -= 0.05;
+      }
     }
     else {
       move = startMove + tutorialMoveInc * startCount;
@@ -1585,6 +1533,8 @@ gameScene.add({
         startCount++;
 
         if (move >= 0) {
+          startCount = 0;
+          slowStartInc = tutorialMoveInc;
           showTutorialBars = false;
           audio.play();
         }
@@ -1703,7 +1653,7 @@ Object.keys(translations).forEach((language, index) => {
     onDown() {
       languageScene.hide(() => {
         options.language = language;
-        setTranslation(language);
+        setLanguage(language);
         optionsScene.show(() => lastOptionBtn.domEl.focus());
       });
     }
@@ -1801,7 +1751,7 @@ menuScene.add({
 
     ctx.fillStyle = '#fff';
     ctx.font = "30px 'Lucida Console', Monaco, monospace"
-    ctx.fillText('Ride Your Music', 145, 260);
+    ctx.fillText('Ride the Waves of Your Music', 15, 260);
 
     ctx.restore();
   }
@@ -2023,7 +1973,7 @@ let cancelBtn = Button({
     optionsScene.hide(() => {
       lastOptionBtn = null;
       options = beforeOptions;
-      setTranslation(options.language);
+      setLanguage(options.language);
       setFontMeasurement();
       menuScene.show(() => startBtn.domEl.focus());
     });
@@ -2055,7 +2005,7 @@ optionsScene.add(cancelBtn, saveBtn);
 //------------------------------------------------------------
 let isTutorial = true;
 let tutorialMove = 0;
-let tutorialMoveInc = 5;
+let tutorialMoveIncStart = 5;
 let showTutorialBars = false;
 
 let tutorialScene = Scene('tutorial');
@@ -2090,8 +2040,9 @@ winScene.add({
 });
 let winText = Text({
   x: kontra.canvas.width / 2,
-  y: kontra.canvas.height / 2 - 150,
+  y: kontra.canvas.height / 2 - 200,
   center: true,
+  size: 50,
   text() {
     return translation.completed;
   },

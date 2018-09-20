@@ -7,24 +7,31 @@ const plumber = require('gulp-plumber');
 const rename = require('gulp-rename');
 const size = require('gulp-size');
 const terser = require('gulp-terser');
-// const through = require('through2');
-// const Vinyl = require('vinyl');
+const through = require('through2');
+const File = require('vinyl');
 
-// let translations = {}
-// function createTranslations() {
-//   function bufferContents(file, enc, cb) {
-//     translations[file.basename.replace('.json')] = JSON.parse(file.contents);
-//     cb();
-//   }
+function concatTranslations(file, opt) {
+  let translations = {}
 
-//   function endStream(cb) {
-//     cb();
-//   }
+  function bufferContents(file, enc, cb) {
+    let locale = file.path.replace(file.base, '').replace('.json', '');
+    translations[locale] = JSON.parse(file.contents);
+    cb();
+  }
 
-//   return through.obj(bufferContents, endStream);
-// }
+  function endStream(cb) {
+    let file = new File({
+      path: 'translations.js',
+      contents: new Buffer(`translations = ${JSON.stringify(translations)};\nsetLanguage(options.language);`)
+    });
+    this.push(file);
+    cb();
+  }
 
-gulp.task('build:js', function() {
+  return through.obj(bufferContents, endStream);
+}
+
+gulp.task('build:js', ['build:translations'], function() {
   return gulp.src(['src/kontra.js', 'src/wavesurfer.js', 'src/globals.js', 'src/ui.js', 'src/translations.js', 'src/scenes/index.js', 'src/**/*.js', '!src/main.js'])
     .pipe(addsrc.append('src/main.js'))
     .pipe(concat('index.js'))
@@ -34,7 +41,9 @@ gulp.task('build:js', function() {
 gulp.task('build:translations', function() {
   translations = {}
 
-  // return gulp.src('translations/*.json')
+  return gulp.src('src/translations/*.json')
+    .pipe(concatTranslations())
+    .pipe(gulp.dest('src'));
 })
 
 gulp.task('build', ['build:js']);

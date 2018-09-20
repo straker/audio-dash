@@ -36,7 +36,7 @@ Object.keys(translations).forEach((language, index) => {
     onDown() {
       languageScene.hide(() => {
         options.language = language;
-        setTranslation(language);
+        setLanguage(language);
         optionsScene.show(() => lastOptionBtn.domEl.focus());
       });
     }

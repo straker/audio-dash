@@ -98,6 +98,14 @@ function setFontMeasurement() {
   fontMeasurement = 15 * options.uiScale;
 }
 
+/**
+ * Set the game language.
+ * @param {string} locale - locale code
+ */
+function setLanguage(locale) {
+  translation = translations[locale] || translations.en;
+}
+
 
 
 
@@ -120,6 +128,7 @@ function start() {
   ship.points = [];
   ship.y = mid;
 
+  tutorialMoveInc = tutorialMoveIncStart * audio.playbackRate;
   showTutorialBars = true;
   isTutorial = true;
   tutorialScene.show();

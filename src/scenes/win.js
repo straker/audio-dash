@@ -10,8 +10,9 @@ winScene.add({
 });
 let winText = Text({
   x: kontra.canvas.width / 2,
-  y: kontra.canvas.height / 2 - 150,
+  y: kontra.canvas.height / 2 - 200,
   center: true,
+  size: 50,
   text() {
     return translation.completed;
   },

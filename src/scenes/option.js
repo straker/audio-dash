@@ -178,7 +178,7 @@ let cancelBtn = Button({
     optionsScene.hide(() => {
       lastOptionBtn = null;
       options = beforeOptions;
-      setTranslation(options.language);
+      setLanguage(options.language);
       setFontMeasurement();
       menuScene.show(() => startBtn.domEl.focus());
     });
