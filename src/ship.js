@@ -40,7 +40,7 @@ let ship = kontra.sprite({
       }
     }
   },
-  render(move) {
+  render(move, size) {
 
     // prevent the points array from populating while the ship isn't moving
     if (numUpdates >= 1 && !gameOverScene.active && !winScene.active) {
@@ -49,12 +49,12 @@ let ship = kontra.sprite({
 
     // draw the line red if it hits a wall
     if (gameOverScene.active) {
-      neonRect(this.x, this.y, this.width, this.height, 255, 0, 0);
-      neonLine(this.points, move, 255, 0, 0);
+      neonRect(this.x, this.y, this.width, this.height, 255, 0, 0, null, size);
+      neonLine(this.points, move, 255, 0, 0, size);
     }
     else {
-      neonRect(this.x, this.y, this.width, this.height, 0, 163, 220);
-      neonLine(this.points, move, 0, 163, 220);
+      neonRect(this.x, this.y, this.width, this.height, 0, 163, 220, null, size);
+      neonLine(this.points, move, 0, 163, 220, size);
     }
   }
 });

@@ -225,7 +225,8 @@ function generateWaveData() {
         height: height,
         offset: offset,
         yOffset: addObstacle && index > firstObstacleIndex ? yOffset : 0,
-        yPos: yPos
+        yPos: yPos,
+        peak: peak
       };
     });
 }

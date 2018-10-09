@@ -457,7 +457,7 @@ function Text(props) {
 
   return text;
 }
-translations = {"en":{"_name_":"English","start":"Start","upload":"Upload Song","options":"Options","spacebar":"[Spacebar]","select":"Select","volume":"Volume","increase_volume":"Increase Volume","decrease_volume":"Decrease Volume","uiScale":"UI Scale","increase_uiScale":"Increase UI Scale","decrease_uiScale":"Decrease UI Scale","gameSpeed":"Game Speed","increase_gameSpeed":"Increase Game Speed","decrease_gameSpeed":"Decrease Game Speed","peaks":"Peaks","increase_peaks":"Increase Peaks","decrease_peaks":"Decrease Peaks","casual":"Casual","on_casual":"Turn on Casual","off_casual":"Turn off Casual","language":"Language","save":"Save","cancel":"Cancel","time":"TIME","best":"BEST","tapHold":"Tap or Hold","gameOver":"Game Over","restart":"Restart","mainMenu":"Main Menu","completed":"Song Completed!","loading":"Loading"}};
+translations = {"en":{"_name_":"English","loading":"Loading","start":"Start","upload":"Upload Song","options":"Options","spacebar":"[Spacebar]","select":"Select","volume":"Volume","increase_volume":"Increase Volume","decrease_volume":"Decrease Volume","uiScale":"UI Scale","increase_uiScale":"Increase UI Scale","decrease_uiScale":"Decrease UI Scale","gameSpeed":"Game Speed","increase_gameSpeed":"Increase Game Speed","decrease_gameSpeed":"Decrease Game Speed","peaks":"Peaks","increase_peaks":"Increase Peaks","decrease_peaks":"Decrease Peaks","casual":"Casual","on_casual":"Turn on Casual","off_casual":"Turn off Casual","language":"Language","save":"Save","cancel":"Cancel","time":"TIME","best":"BEST","tapHold":"Tap or Hold","gameOver":"Game Over","restart":"Restart","mainMenu":"Main Menu","completed":"Song Completed!"}};
 setLanguage(options.language);
 //------------------------------------------------------------
 // Scene
@@ -765,7 +765,8 @@ function generateWaveData() {
         height: height,
         offset: offset,
         yOffset: addObstacle && index > firstObstacleIndex ? yOffset : 0,
-        yPos: yPos
+        yPos: yPos,
+        peak: peak
       };
     });
 }
@@ -786,20 +787,24 @@ function generateWaveData() {
  * @param {number} r - Red value
  * @param {number} g - Green value
  * @param {number} b - Blue value
+ * @param {string} fill - final stroke color
+ * @param {number} size - Line size
  */
-function neonRect(x, y, w, h, r, g, b, fill) {
+function neonRect(x, y, w, h, r, g, b, fill, size) {
+  size = size || 1;
+
   ctx.save();
   ctx.strokeStyle = "rgba(" + r + "," + g + "," + b + ",0.2)";
-  ctx.lineWidth = 10.5;
+  ctx.lineWidth = 10.5 * size;
   ctx.strokeRect(x, y, w, h);
-  ctx.lineWidth = 8;
+  ctx.lineWidth = 8 * size;
   ctx.strokeRect(x, y, w, h);
-  ctx.lineWidth = 5.5;
+  ctx.lineWidth = 5.5 * size;
   ctx.strokeRect(x, y, w, h);
-  ctx.lineWidth = 3;
+  ctx.lineWidth = 3 * size;
   ctx.strokeRect(x, y, w, h);
   ctx.strokeStyle = fill || "#fff";
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = 1.5 * size;
   ctx.strokeRect(x, y, w, h);
   ctx.restore();
 }
@@ -825,27 +830,30 @@ function drawLines(points, move) {
  * @param {number} r - Red value
  * @param {number} g - Green value
  * @param {number} b - Blue value
+ * @param {number} size - Line size
  */
-function neonLine(points, move, r, g, b) {
+function neonLine(points, move, r, g, b, size) {
   if (!points.length) return;
+
+  size = size || 1;
 
   ctx.save();
   ctx.strokeStyle = "rgba(" + r + "," + g + "," + b + ",0.2)";
 
-  ctx.lineWidth = 10.5;
+  ctx.lineWidth = 10.5 * size;
   drawLines(points, move);
 
-  ctx.lineWidth = 8;
+  ctx.lineWidth = 8 * size;
   drawLines(points, move);
 
-  ctx.lineWidth = 5.5;
+  ctx.lineWidth = 5.5 * size;
   drawLines(points, move);
 
-  ctx.lineWidth = 3;
+  ctx.lineWidth = 3 * size;
   drawLines(points, move);
 
   ctx.strokeStyle = "#fff";
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = 1.5 * size;
   drawLines(points, move);
 
   ctx.restore();
@@ -1360,7 +1368,7 @@ let ship = kontra.sprite({
       }
     }
   },
-  render(move) {
+  render(move, size) {
 
     // prevent the points array from populating while the ship isn't moving
     if (numUpdates >= 1 && !gameOverScene.active && !winScene.active) {
@@ -1369,12 +1377,12 @@ let ship = kontra.sprite({
 
     // draw the line red if it hits a wall
     if (gameOverScene.active) {
-      neonRect(this.x, this.y, this.width, this.height, 255, 0, 0);
-      neonLine(this.points, move, 255, 0, 0);
+      neonRect(this.x, this.y, this.width, this.height, 255, 0, 0, null, size);
+      neonLine(this.points, move, 255, 0, 0, size);
     }
     else {
-      neonRect(this.x, this.y, this.width, this.height, 0, 163, 220);
-      neonLine(this.points, move, 0, 163, 220);
+      neonRect(this.x, this.y, this.width, this.height, 0, 163, 220, null, size);
+      neonLine(this.points, move, 0, 163, 220, size);
     }
   }
 });
@@ -1586,6 +1594,9 @@ gameScene.add({
       }
     }
 
+    let peak = ampBar && ampBar.peak;
+    let size = !peak || peak < 0.6 ? 1 : peak * 4
+
     // draw amp bar
     if (ampBar) {
       let x = ampBar.x - move - waveWidth;
@@ -1595,11 +1606,11 @@ gameScene.add({
       let topHeight = ampBar.height - ampBar.offset + ampBar.yOffset;
       let botHeight = ampBar.height + ampBar.offset - ampBar.yOffset;
 
-      neonRect(x, topY, width, topHeight, 255, 0, 0);
-      neonRect(x, botY, width, botHeight, 255, 0, 0);
+      neonRect(x, topY, width, topHeight, 255, 0, 0, null, size);
+      neonRect(x, botY, width, botHeight, 255, 0, 0, null, size);
     }
 
-    ship.render(move);
+    ship.render(move, size);
 
     while (ship.points.length && ship.points[0].x - move < 0 - ship.width) {
       ship.points.shift();

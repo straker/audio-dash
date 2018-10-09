@@ -92,6 +92,9 @@ gameScene.add({
       }
     }
 
+    let peak = ampBar && ampBar.peak;
+    let size = !peak || peak < 0.6 ? 1 : peak * 4
+
     // draw amp bar
     if (ampBar) {
       let x = ampBar.x - move - waveWidth;
@@ -101,11 +104,11 @@ gameScene.add({
       let topHeight = ampBar.height - ampBar.offset + ampBar.yOffset;
       let botHeight = ampBar.height + ampBar.offset - ampBar.yOffset;
 
-      neonRect(x, topY, width, topHeight, 255, 0, 0);
-      neonRect(x, botY, width, botHeight, 255, 0, 0);
+      neonRect(x, topY, width, topHeight, 255, 0, 0, null, size);
+      neonRect(x, botY, width, botHeight, 255, 0, 0, null, size);
     }
 
-    ship.render(move);
+    ship.render(move, size);
 
     while (ship.points.length && ship.points[0].x - move < 0 - ship.width) {
       ship.points.shift();

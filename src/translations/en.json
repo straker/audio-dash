@@ -1,5 +1,6 @@
 {
   "_name_": "English",
+  "loading": "Loading",
   "start": "Start",
   "upload": "Upload Song",
   "options": "Options",
@@ -29,6 +30,5 @@
   "gameOver": "Game Over",
   "restart": "Restart",
   "mainMenu": "Main Menu",
-  "completed": "Song Completed!",
-  "loading": "Loading"
+  "completed": "Song Completed!"
 }

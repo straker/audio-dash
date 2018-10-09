@@ -15,20 +15,24 @@
  * @param {number} r - Red value
  * @param {number} g - Green value
  * @param {number} b - Blue value
+ * @param {string} fill - final stroke color
+ * @param {number} size - Line size
  */
-function neonRect(x, y, w, h, r, g, b, fill) {
+function neonRect(x, y, w, h, r, g, b, fill, size) {
+  size = size || 1;
+
   ctx.save();
   ctx.strokeStyle = "rgba(" + r + "," + g + "," + b + ",0.2)";
-  ctx.lineWidth = 10.5;
+  ctx.lineWidth = 10.5 * size;
   ctx.strokeRect(x, y, w, h);
-  ctx.lineWidth = 8;
+  ctx.lineWidth = 8 * size;
   ctx.strokeRect(x, y, w, h);
-  ctx.lineWidth = 5.5;
+  ctx.lineWidth = 5.5 * size;
   ctx.strokeRect(x, y, w, h);
-  ctx.lineWidth = 3;
+  ctx.lineWidth = 3 * size;
   ctx.strokeRect(x, y, w, h);
   ctx.strokeStyle = fill || "#fff";
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = 1.5 * size;
   ctx.strokeRect(x, y, w, h);
   ctx.restore();
 }
@@ -54,27 +58,30 @@ function drawLines(points, move) {
  * @param {number} r - Red value
  * @param {number} g - Green value
  * @param {number} b - Blue value
+ * @param {number} size - Line size
  */
-function neonLine(points, move, r, g, b) {
+function neonLine(points, move, r, g, b, size) {
   if (!points.length) return;
+
+  size = size || 1;
 
   ctx.save();
   ctx.strokeStyle = "rgba(" + r + "," + g + "," + b + ",0.2)";
 
-  ctx.lineWidth = 10.5;
+  ctx.lineWidth = 10.5 * size;
   drawLines(points, move);
 
-  ctx.lineWidth = 8;
+  ctx.lineWidth = 8 * size;
   drawLines(points, move);
 
-  ctx.lineWidth = 5.5;
+  ctx.lineWidth = 5.5 * size;
   drawLines(points, move);
 
-  ctx.lineWidth = 3;
+  ctx.lineWidth = 3 * size;
   drawLines(points, move);
 
   ctx.strokeStyle = "#fff";
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = 1.5 * size;
   drawLines(points, move);
 
   ctx.restore();
