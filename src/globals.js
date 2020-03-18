@@ -37,7 +37,7 @@ let gamepad;  // gamepad state
 let lastUsedInput;  // keep track of last used input device
 let objectUrl;  // in-memory url of audio files
 let fadeTime = 450;  // how long a scene takes to fade
-
+let translation;
 
 
 

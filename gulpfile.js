@@ -1,5 +1,4 @@
 const addsrc = require('gulp-add-src');
-const babel = require('gulp-babel');
 const concat = require('gulp-concat-util');
 const gulp = require('gulp');
 const htmlmin = require('gulp-htmlmin');
@@ -14,7 +13,7 @@ function concatTranslations(file, opt) {
   let translations = {}
 
   function bufferContents(file, enc, cb) {
-    let locale = file.path.replace(file.base, '').replace('.json', '');
+    let locale = file.path.replace(file.base + '/', '').replace('.json', '');
     translations[locale] = JSON.parse(file.contents);
     cb();
   }
@@ -22,7 +21,7 @@ function concatTranslations(file, opt) {
   function endStream(cb) {
     let file = new File({
       path: 'translations.js',
-      contents: new Buffer(`translations = ${JSON.stringify(translations)};\nsetLanguage(options.language);`)
+      contents: new Buffer(`const translations = ${JSON.stringify(translations)};\nsetLanguage(options.language);`)
     });
     this.push(file);
     cb();
@@ -31,7 +30,7 @@ function concatTranslations(file, opt) {
   return through.obj(bufferContents, endStream);
 }
 
-gulp.task('build:js', ['build:translations'], function() {
+gulp.task('build:js', function() {
   return gulp.src(['src/kontra.js', 'src/wavesurfer.js', 'src/globals.js', 'src/ui.js', 'src/translations.js', 'src/scenes/index.js', 'src/**/*.js', '!src/main.js'])
     .pipe(addsrc.append('src/main.js'))
     .pipe(concat('index.js'))
@@ -46,17 +45,11 @@ gulp.task('build:translations', function() {
     .pipe(gulp.dest('src'));
 })
 
-gulp.task('build', ['build:js']);
-
 gulp.task('dist:js', function() {
   return gulp.src('index.js')
-    .pipe(rename('dist.js'))
     .pipe(concat.header('(function() {'))
     .pipe(concat.footer('})();'))
     .pipe(plumber())
-    .pipe(babel({
-      presets: ['@babel/env']
-    }))
     .pipe(terser())
     .pipe(plumber.stop())
     .pipe(size({
@@ -92,10 +85,11 @@ gulp.task('dist:audio', function() {
     .pipe(gulp.dest('dist'));
 });
 
-gulp.task('dist', ['dist:js', 'dist:html', 'dist:audio']);
+gulp.task('build', gulp.series('build:translations', 'build:js'));
+gulp.task('dist', gulp.parallel('dist:js', 'dist:html', 'dist:audio'));
 
 gulp.task('watch', function() {
   gulp.watch('src/**/*.js', ['build:js']);
 });
 
-gulp.task('default', ['build:js']);
+gulp.task('default', gulp.series('build'));

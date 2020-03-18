@@ -151,7 +151,7 @@ let gamepad;  // gamepad state
 let lastUsedInput;  // keep track of last used input device
 let objectUrl;  // in-memory url of audio files
 let fadeTime = 450;  // how long a scene takes to fade
-
+let translation;
 
 
 
@@ -457,7 +457,7 @@ function Text(props) {
 
   return text;
 }
-translations = {"en":{"_name_":"English","loading":"Loading","start":"Start","upload":"Upload Song","options":"Options","spacebar":"[Spacebar]","select":"Select","volume":"Volume","increase_volume":"Increase Volume","decrease_volume":"Decrease Volume","uiScale":"UI Scale","increase_uiScale":"Increase UI Scale","decrease_uiScale":"Decrease UI Scale","gameSpeed":"Game Speed","increase_gameSpeed":"Increase Game Speed","decrease_gameSpeed":"Decrease Game Speed","peaks":"Peaks","increase_peaks":"Increase Peaks","decrease_peaks":"Decrease Peaks","casual":"Casual","on_casual":"Turn on Casual","off_casual":"Turn off Casual","language":"Language","save":"Save","cancel":"Cancel","time":"TIME","best":"BEST","tapHold":"Tap or Hold","gameOver":"Game Over","restart":"Restart","mainMenu":"Main Menu","completed":"Song Completed!"}};
+const translations = {"en":{"_name_":"English","loading":"Loading","start":"Start","upload":"Upload Song","options":"Options","spacebar":"[Spacebar]","select":"Select","volume":"Volume","increase_volume":"Increase Volume","decrease_volume":"Decrease Volume","uiScale":"UI Scale","increase_uiScale":"Increase UI Scale","decrease_uiScale":"Decrease UI Scale","gameSpeed":"Game Speed","increase_gameSpeed":"Increase Game Speed","decrease_gameSpeed":"Decrease Game Speed","peaks":"Peaks","increase_peaks":"Increase Peaks","decrease_peaks":"Decrease Peaks","casual":"Casual","on_casual":"Turn on Casual","off_casual":"Turn off Casual","language":"Language","save":"Save","cancel":"Cancel","time":"TIME","best":"BEST","tapHold":"Tap or Hold","gameOver":"Game Over","restart":"Restart","mainMenu":"Main Menu","completed":"Song Completed!"}};
 setLanguage(options.language);
 //------------------------------------------------------------
 // Scene
@@ -1099,9 +1099,12 @@ function handleArrowDownUp(inc) {
 /**
  * Select the focused button
  */
-kontra.keys.bind('space', () => {
+kontra.keys.bind('space', (e) => {
   lastUsedInput = 'keyboard';
   uploadBtn.disabled = false;
+
+  e.preventDefault();
+  e.stopPropagation();
 
   if (focusedBtn && focusedBtn.onDown) {
     focusedBtn.onDown();
@@ -1528,8 +1531,6 @@ gameScene.add({
       // to match up with the audio
       let priorMove = Math.round(slowStartInc * ++startCount);
       if (audio.currentTime < 1 && move < priorMove && !audio.paused) {
-        console.log('\nmove:', move);
-        console.log('priorMove:', priorMove);
         move = priorMove;
         slowStartInc -= 0.05;
       }
@@ -1595,7 +1596,7 @@ gameScene.add({
     }
 
     let peak = ampBar && ampBar.peak;
-    let size = !peak || peak < 0.6 ? 1 : peak * 4
+    let size = !peak || peak < 0.6 ? 1 : peak * 4;
 
     // draw amp bar
     if (ampBar) {

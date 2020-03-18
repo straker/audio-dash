@@ -26,8 +26,6 @@ gameScene.add({
       // to match up with the audio
       let priorMove = Math.round(slowStartInc * ++startCount);
       if (audio.currentTime < 1 && move < priorMove && !audio.paused) {
-        console.log('\nmove:', move);
-        console.log('priorMove:', priorMove);
         move = priorMove;
         slowStartInc -= 0.05;
       }
@@ -93,7 +91,7 @@ gameScene.add({
     }
 
     let peak = ampBar && ampBar.peak;
-    let size = !peak || peak < 0.6 ? 1 : peak * 4
+    let size = !peak || peak < 0.6 ? 1 : peak * 4;
 
     // draw amp bar
     if (ampBar) {

@@ -8,19 +8,17 @@
     "start": "http-server"
   },
   "devDependencies": {
-    "@babel/core": "^7.0.1",
-    "@babel/preset-env": "^7.0.0",
-    "gulp": "^3.9.1",
+    "@babel/core": "^7.8.7",
+    "gulp": "^4.0.2",
     "gulp-add-src": "^1.0.0",
-    "gulp-babel": "^8.0.0",
     "gulp-concat-util": "^0.5.5",
     "gulp-htmlmin": "^5.0.1",
-    "gulp-plumber": "^1.2.0",
+    "gulp-plumber": "^1.2.1",
     "gulp-rename": "^1.4.0",
     "gulp-size": "^3.0.0",
-    "gulp-terser": "^1.0.1",
-    "http-server": "^0.11.1",
-    "through2": "^2.0.3",
+    "gulp-terser": "^1.2.0",
+    "http-server": "^0.12.1",
+    "through2": "^2.0.5",
     "vinyl": "^2.2.0"
   }
 }

@@ -118,9 +118,12 @@ function handleArrowDownUp(inc) {
 /**
  * Select the focused button
  */
-kontra.keys.bind('space', () => {
+kontra.keys.bind('space', (e) => {
   lastUsedInput = 'keyboard';
   uploadBtn.disabled = false;
+
+  e.preventDefault();
+  e.stopPropagation();
 
   if (focusedBtn && focusedBtn.onDown) {
     focusedBtn.onDown();
